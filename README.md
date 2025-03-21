@@ -9,8 +9,7 @@ Design an airline management system in **Spring Boot** with the following featur
 
 ## 🛠️ Tech Stack  
 - **Backend:** Spring Boot (Java)  
-- **Database:** MySQL / PostgreSQL  
-- **API:** RESTful Services  
+
 
 ## 🚀 Setup Instructions  
 
