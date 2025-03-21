@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -72,14 +73,46 @@ class AirlineManagementSystemTests {
 				.andExpect(status().isOk());
 	}
 
-	// ❌ 7. Get a non-existent flight (404)
+	// ✅ 7. Get all flights with sorting
+	@Test
+	void testGetAllFlightsSorted() throws Exception {
+		mockMvc.perform(get("/flights?sort=desc"))
+				.andExpect(status().isOk());
+	}
+
+	// ✅ 8. Get schedule without date parameter (should fail gracefully)
+	@Test
+	void testGetScheduleWithoutDate() throws Exception {
+		mockMvc.perform(get("/flights/1/schedules")) // No date param
+				.andExpect(status().isBadRequest());
+	}
+
+	// ✅ 9. Book a ticket and verify the response structure
+	@Test
+	void testBookTicketResponse() throws Exception {
+		String ticketJson = """
+        {
+            "passengerName": "Alice Smith",
+            "flightId": 1
+        }
+        """;
+
+		mockMvc.perform(post("/tickets")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(ticketJson))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.passengerName").value("Alice Smith"))
+				.andExpect(jsonPath("$.flightId").value(1));
+	}
+
+	// ❌ 10. Get a non-existent flight (404)
 	@Test
 	void testGetFlightById_NotFound() throws Exception {
 		mockMvc.perform(get("/flights/9999"))  // Assuming ID 9999 does not exist
 				.andExpect(status().isNotFound());
 	}
 
-	// ❌ 8. Get schedule for a non-existent flight (404)
+	// ❌ 11. Get schedule for a non-existent flight (404)
 	@Test
 	void testGetSchedule_NotFound() throws Exception {
 		mockMvc.perform(get("/flights/9999/schedules")
@@ -87,21 +120,21 @@ class AirlineManagementSystemTests {
 				.andExpect(status().isNotFound());
 	}
 
-	// ❌ 9. Get a non-existent ticket (404)
+	// ❌ 12. Get a non-existent ticket (404)
 	@Test
 	void testGetTicket_NotFound() throws Exception {
 		mockMvc.perform(get("/tickets/9999"))  // Assuming ID 9999 does not exist
 				.andExpect(status().isNotFound());
 	}
 
-	// ❌ 10. Cancel a non-existent ticket (404)
+	// ❌ 13. Cancel a non-existent ticket (404)
 	@Test
 	void testCancelTicket_NotFound() throws Exception {
 		mockMvc.perform(delete("/tickets/9999"))  // Assuming ID 9999 does not exist
 				.andExpect(status().isNotFound());
 	}
 
-	// ❌ 11. Book a ticket with a non-existent flight (404)
+	// ❌ 14. Book a ticket with a non-existent flight (404)
 	@Test
 	void testBookTicket_FlightNotFound() throws Exception {
 		String ticketJson = """
@@ -117,10 +150,40 @@ class AirlineManagementSystemTests {
 				.andExpect(status().isNotFound());
 	}
 
-	// ❌ 12. Access an invalid endpoint (404)
+	// ❌ 15. Access an invalid endpoint (404)
 	@Test
 	void testInvalidEndpoint() throws Exception {
 		mockMvc.perform(get("/invalidEndpoint"))
 				.andExpect(status().isNotFound());
+	}
+
+	// ❌ 16. Get a flight with an invalid ID format (400 Bad Request)
+	@Test
+	void testGetFlightInvalidId() throws Exception {
+		mockMvc.perform(get("/flights/abc"))  // Passing string instead of a number
+				.andExpect(status().isBadRequest());
+	}
+
+	// ❌ 17. Book a ticket without required fields (400 Bad Request)
+	@Test
+	void testBookTicketMissingFields() throws Exception {
+		String ticketJson = """
+        {
+            "passengerName": "John Doe"
+            // Missing flightId
+        }
+        """;
+
+		mockMvc.perform(post("/tickets")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(ticketJson))
+				.andExpect(status().isBadRequest());
+	}
+
+	// ❌ 18. Cancel a ticket that was already canceled (Assume 410 Gone)
+	@Test
+	void testCancelAlreadyCanceledTicket() throws Exception {
+		mockMvc.perform(delete("/tickets/2"))  // Assume ticket 2 was already canceled
+				.andExpect(status().isGone());
 	}
 }
